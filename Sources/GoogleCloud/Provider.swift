@@ -8,8 +8,8 @@
 import Vapor
 
 public struct GoogleCloudProviderConfig: Service {
-    let serviceAccountCredentialPath: String
-    let project: String?
+    public let serviceAccountCredentialPath: String
+    public let project: String?
 
     public init(project: String? = nil, credentialFile: String? = nil) {
         self.project = project
@@ -41,5 +41,6 @@ public final class GoogleCloudProvider: Provider {
     
     public func register(_ services: inout Services) throws {
         services.register(GoogleCloudStorageClient.self)
+        services.register(GoogleSheetsClient.self)
     }
 }
