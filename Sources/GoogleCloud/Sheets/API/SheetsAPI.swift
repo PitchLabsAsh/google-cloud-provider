@@ -8,25 +8,12 @@
 import Vapor
 
 public protocol SheetsAPI {
-    func get(sheet: String, queryParameters: [String: String]?) throws -> Future<SpreadSheet>
-    func create() throws -> Future<SpreadSheet>
+    func getSpreadSheet(spreadSheet: String) throws -> Future<SpreadSheet>
+    func createSpreadSheet() throws -> Future<SpreadSheet>
     func copySheet(sheet: Int, fromSpreadSheet: String, toSpreadSheet: String ) throws -> Future<SheetProperties>
-}
-
-extension SheetsAPI {
-
-    func get(sheet: String, queryParameters: [String: String]? = nil) throws -> Future<SpreadSheet> {
-        return try get(sheet: sheet, queryParameters: queryParameters)
-    }
-
-    func create() throws -> Future<SpreadSheet> {
-        return try create()
-    }
-
-    func copySheet(sheet: Int, fromSpreadSheet: String, toSpreadSheet: String ) throws -> Future<SheetProperties> {
-        return try copySheet(sheet: sheet, fromSpreadSheet: fromSpreadSheet, toSpreadSheet:toSpreadSheet )
-    }
-
+    func deleteSheet(sheet: Int, fromSpreadSheet: String ) throws -> Future<SheetProperties>
+    func updateValues(spreadSheet: String, updateRequest: SheetUpdateValuesRequest) throws -> Future<SheetUpdateValuesResponse>
+    func getValues(spreadSheet: String, forRange: String) throws -> Future<SheetGetValuesResponse>
 }
 
 public final class GoogleSheetsAPI: SheetsAPI {
@@ -37,12 +24,12 @@ public final class GoogleSheetsAPI: SheetsAPI {
         self.request = request
     }
 
-    public func get(sheet: String, queryParameters: [String: String]? = nil) throws -> Future<SpreadSheet> {
+    public func getSpreadSheet(spreadSheet: String) throws -> Future<SpreadSheet> {
         return try request
-            .send(method: .GET, path: "\(endpoint)/\(sheet)", query: queryParameters?.queryParameters ?? "", body: .empty)
+            .send(method: .GET, path: "\(endpoint)/\(spreadSheet)", query: "", body: .empty)
     }
 
-    public func create() throws -> Future<SpreadSheet> {
+    public func createSpreadSheet() throws -> Future<SpreadSheet> {
         return try request
             .send(method: .POST, path: "\(endpoint)", query: "", body: .empty)
     }
@@ -53,5 +40,25 @@ public final class GoogleSheetsAPI: SheetsAPI {
         return try request
             .send(method: .POST, path: "\(endpoint)/\(fromSpreadSheet)/sheets/\(sheet):copyTo", query: "", body: requestBody)
     }
+
+    public func deleteSheet(sheet: Int, fromSpreadSheet: String ) throws -> Future<SheetProperties> {
+
+        let requestBody = try JSONEncoder().encode(["requests": ["deleteSheet": ["sheetId":sheet]]]).convertToHTTPBody()
+        return try request
+            .send(method: .POST, path: "\(endpoint)/\(fromSpreadSheet):batchUpdate", query: "", body: requestBody)
+    }
+
+    public func updateValues(spreadSheet: String, updateRequest: SheetUpdateValuesRequest)  throws -> Future<SheetUpdateValuesResponse> {
+        let body = try JSONSerialization.data(withJSONObject: try updateRequest.toEncodedDictionary()).convertToHTTPBody()
+        let queryParams = ["valueInputOption": "USER_ENTERED"].queryParameters
+        return try request
+            .send(method: .PUT, path: "\(endpoint)/\(spreadSheet)/values/\(updateRequest.range)", query: queryParams , body: body)
+    }
+
+    public func getValues(spreadSheet: String, forRange: String)  throws -> Future<SheetGetValuesResponse> {
+        return try request
+            .send(method: .GET, path: "\(endpoint)/\(spreadSheet)/values/\(forRange)", query: "" , body: .empty)
+    }
+
 }
 
